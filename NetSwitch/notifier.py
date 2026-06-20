@@ -49,14 +49,14 @@ def _loop():
 def _ensure():
     if _root is None:
         _q_started.clear()
-        t = threading.Thread(target=_loop, daemon=True)
-        t.start()
+        th = threading.Thread(target=_loop, daemon=True)
+        th.start()
         _q_started.wait(timeout=5)
 
 
 def _cancel_fade():
     global _fade_job
-    if _fade_job is not None:
+    if _fade_job is not None and _root:
         try:
             _root.after_cancel(_fade_job)
         except Exception:
@@ -101,15 +101,17 @@ def _do_show(title, message, x, y, ww, wh):
 
 def _fade(start, end, steps):
     global _fade_job
+    if not _root:
+        return
     vals = [start + (end - start) * (i + 1) / steps for i in range(steps)]
     vals.append(end)
 
     def apply(i):
         global _fade_job
+        if not _root:
+            return
         if i < len(vals):
             _root.attributes('-alpha', vals[i])
-            if end > start:
-                _force_topmost(_root.winfo_id())
             _fade_job = _root.after(20, lambda: apply(i + 1))
         elif end == 0.0:
             _root.withdraw()

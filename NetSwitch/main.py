@@ -1,7 +1,6 @@
 import argparse
 import atexit
 import ctypes
-import hashlib
 import json
 import os
 import signal
@@ -22,10 +21,10 @@ from toggle import get_active_adapters, disable_adapters, enable_adapters, check
 from notifier import show_notification
 from gui import (set_callbacks, show_window, hide_window, update_status,
                  update_hotkey, start_capture_mode, finish_capture_mode,
-                 show_captured_hotkey, update_version, get_root, set_lang_callback)
+                 show_captured_hotkey, update_version, get_root)
 from strings import set_lang, get_lang, t
 
-VERSION = '1.1.0'
+VERSION = '1.0.1'
 UPDATE_URL = 'https://raw.githubusercontent.com/pro72rus-dev/NetSwitch/main/update.json'
 
 _mutex = None
@@ -202,7 +201,7 @@ def toggle_internet() -> None:
                 return
             internet_off = False
             disabled_adapter_names = []
-            show_notification(t('enabling'), '\n'.join(names))
+            show_notification(t('enabled'), '\n'.join(names))
             threading.Thread(target=_wait_internet, args=(names,), daemon=True).start()
 
     update_status(internet_off)
@@ -438,21 +437,21 @@ def _unregister_uninstall():
 
 
 def _do_install() -> None:
-    src = os.path.abspath(sys.argv[0])
+    src = sys.executable if _is_frozen() else os.path.abspath(sys.argv[0])
     os.makedirs(INSTALL_DIR, exist_ok=True)
     dest = os.path.join(INSTALL_DIR, 'NetSwitch.exe')
     tmp = dest + '.tmp'
     try:
         shutil.copy2(src, tmp)
         if os.path.exists(dest):
-            for attempt in range(3):
+            for _ in range(3):
                 try:
                     os.remove(dest)
                     break
                 except PermissionError:
                     time.sleep(1)
         if os.path.exists(dest):
-            raise OSError(f'Cannot remove old exe after {3} attempts')
+            raise OSError('Cannot remove old exe')
         os.rename(tmp, dest)
     except Exception:
         if os.path.exists(tmp):
@@ -477,14 +476,7 @@ def _do_uninstall() -> None:
             shutil.rmtree(CONFIG_DIR, ignore_errors=True)
     except Exception:
         pass
-    running_from_install = _is_running_from_install_dir()
-    if running_from_install:
-        _unregister_uninstall()
-        try:
-            if os.path.exists(CONFIG_DIR):
-                shutil.rmtree(CONFIG_DIR, ignore_errors=True)
-        except Exception:
-            pass
+    if _is_running_from_install_dir():
         bat = os.path.join(tempfile.mkdtemp(), '_uninstall.bat')
         with open(bat, 'w') as f:
             f.write('@echo off\n')
@@ -525,7 +517,7 @@ def _check_update() -> None:
         except Exception:
             show_notification('Update', t('update_failed'))
             return
-        me = os.path.abspath(sys.argv[0])
+        me = sys.executable if _is_frozen() else os.path.abspath(sys.argv[0])
         bat = os.path.join(tmp_dir, '_update.bat')
         with open(bat, 'w') as f:
             f.write('@echo off\n')

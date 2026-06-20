@@ -6,7 +6,7 @@
 
 ### Отключение и включение интернета одной клавишей
 
-![Version](https://img.shields.io/badge/version-1.1.0-0078D4?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.0.1-0078D4?style=for-the-badge)
 ![Python](https://img.shields.io/badge/python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Windows](https://img.shields.io/badge/windows-10%2F11-0078D4?style=for-the-badge&logo=windows&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-4CAF50?style=for-the-badge)

@@ -1,5 +1,4 @@
 import subprocess
-import threading
 
 _si = subprocess.STARTUPINFO()
 _si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -40,9 +39,6 @@ def get_active_adapters() -> list[dict]:
 def disable_adapters(adapter_names: list[str]) -> list[str]:
     if not adapter_names:
         return []
-    global _cached_names
-    if not _cached_names:
-        _cached_names = list(adapter_names)
 
     procs = []
     for name in adapter_names:

@@ -78,10 +78,11 @@ def _cancel_capture():
     _is_capturing = False
     if _on_cancel_capture:
         _on_cancel_capture()
-    _root.after(0, lambda: (_confirm_btn.pack_forget(),
-                             _rebind_btn.config(text=t('change'), bg='#333'),
-                             _rebind_hint.config(text=''),
-                             _hotkey_label.config(fg=WHITE)))
+    if _root:
+        _root.after(0, lambda: (_confirm_btn.pack_forget(),
+                                 _rebind_btn.config(text=t('change'), bg='#333'),
+                                 _rebind_hint.config(text=''),
+                                 _hotkey_label.config(fg=WHITE)))
 
 
 def start_capture_mode():
@@ -273,8 +274,8 @@ def _loop():
 def _ensure():
     if _root is None:
         _q_started.clear()
-        t = threading.Thread(target=_loop, daemon=True)
-        t.start()
+        th = threading.Thread(target=_loop, daemon=True)
+        th.start()
         _q_started.wait(timeout=5)
 
 
