@@ -24,7 +24,7 @@ from gui import (set_callbacks, show_window, hide_window, update_status,
                  show_captured_hotkey, update_version, get_root)
 from strings import set_lang, get_lang, t
 
-VERSION = '1.0.1'
+VERSION = '1.0.2'
 UPDATE_URL = 'https://raw.githubusercontent.com/pro72rus-dev/NetSwitch/main/update.json'
 
 _mutex = None
@@ -257,7 +257,7 @@ def _register_hotkey(hotkey: str) -> bool:
     if not hotkey:
         return True
     try:
-        keyboard.add_hotkey(hotkey, toggle_internet, suppress=True)
+        keyboard.add_hotkey(hotkey, toggle_internet, suppress=False)
         return True
     except Exception:
         return False
