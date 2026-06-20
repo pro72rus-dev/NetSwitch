@@ -1,14 +1,12 @@
 import argparse
 import atexit
 import ctypes
-import hashlib
 import json
 import os
 import signal
 import shutil
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 import urllib.request
@@ -25,27 +23,13 @@ from gui import (set_callbacks, show_window, hide_window, update_status,
                  show_captured_hotkey, update_version, get_root, set_lang_callback)
 from strings import set_lang, get_lang, t
 
-VERSION = '1.1.0'
-UPDATE_URL = 'https://raw.githubusercontent.com/pro72rus-dev/NetSwitch/main/update.json'
-
-_mutex = None
-
-
-def _acquire_mutex() -> bool:
-    global _mutex
-    try:
-        _mutex = ctypes.windll.kernel32.CreateMutexW(None, False, 'NetSwitchSingleInstance')
-        if ctypes.windll.kernel32.GetLastError() == 183:
-            return False
-        return True
-    except Exception:
-        return True
+VERSION = '1.0.0'
+UPDATE_URL = 'https://raw.githubusercontent.com/pro72rus/netswitch/main/update.json'
 
 CONFIG_DIR = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'NetSwitch')
 CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json')
 
 _lock = threading.Lock()
-_config_lock = threading.Lock()
 disabled_adapter_names: list[str] = []
 internet_off = False
 _last_toggle: float = 0
@@ -112,15 +96,7 @@ def is_admin() -> bool:
 
 
 def elevate() -> None:
-    skip = {'--bind', '--detect'}
-    args = []
-    i = 0
-    while i < len(sys.argv):
-        if sys.argv[i] in skip:
-            i += 1
-            continue
-        args.append(sys.argv[i])
-        i += 1
+    args = [a for a in sys.argv if a not in ('--bind', '--detect')]
     exe = sys.executable.replace('python.exe', 'pythonw.exe')
     if not os.path.exists(exe):
         exe = sys.executable
@@ -131,26 +107,23 @@ def elevate() -> None:
 
 def load_config() -> dict:
     default = {'hotkey': 'end', 'lang': 'en'}
-    with _config_lock:
-        if os.path.exists(CONFIG_FILE):
-            try:
-                with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-                    data = json.load(f)
-                if isinstance(data, dict):
-                    default.update(data)
-            except Exception:
-                pass
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            if isinstance(data, dict):
+                default.update(data)
+        except Exception:
+            pass
     return default
 
 
 def save_config(cfg: dict) -> None:
-    with _config_lock:
-        try:
-            os.makedirs(CONFIG_DIR, exist_ok=True)
-            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(cfg, f, indent=2, ensure_ascii=False)
-        except Exception:
-            pass
+    try:
+        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cfg, f, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
 
 
 def cleanup() -> None:
@@ -418,12 +391,6 @@ def _register_uninstall():
         winreg.SetValueEx(key, 'UninstallString', 0, winreg.REG_SZ, uninstall_cmd)
         winreg.SetValueEx(key, 'NoModify', 0, winreg.REG_DWORD, 1)
         winreg.SetValueEx(key, 'NoRepair', 0, winreg.REG_DWORD, 1)
-        try:
-            exe_path = os.path.join(INSTALL_DIR, 'NetSwitch.exe')
-            exe_size = os.path.getsize(exe_path) // 1024
-            winreg.SetValueEx(key, 'EstimatedSize', 0, winreg.REG_DWORD, exe_size)
-        except Exception:
-            pass
         winreg.CloseKey(key)
     except Exception:
         pass
@@ -438,31 +405,25 @@ def _unregister_uninstall():
 
 
 def _do_install() -> None:
-    src = os.path.abspath(sys.argv[0])
+    src = sys.executable
     os.makedirs(INSTALL_DIR, exist_ok=True)
     dest = os.path.join(INSTALL_DIR, 'NetSwitch.exe')
     tmp = dest + '.tmp'
     try:
         shutil.copy2(src, tmp)
         if os.path.exists(dest):
-            for attempt in range(3):
-                try:
-                    os.remove(dest)
-                    break
-                except PermissionError:
-                    time.sleep(1)
-        if os.path.exists(dest):
-            raise OSError(f'Cannot remove old exe after {3} attempts')
+            try:
+                os.remove(dest)
+            except PermissionError:
+                time.sleep(1)
+                os.remove(dest)
         os.rename(tmp, dest)
     except Exception:
         if os.path.exists(tmp):
-            try:
-                os.remove(tmp)
-            except Exception:
-                pass
+            os.remove(tmp)
         shutil.copy2(src, dest)
     for _ in range(10):
-        if os.path.exists(dest) and os.path.getsize(dest) > 100000:
+        if os.path.exists(dest) and os.path.getsize(dest) > 0:
             break
         time.sleep(0.5)
     _register_uninstall()
@@ -473,31 +434,16 @@ def _do_install() -> None:
 def _do_uninstall() -> None:
     _unregister_uninstall()
     try:
-        if os.path.exists(CONFIG_DIR):
-            shutil.rmtree(CONFIG_DIR, ignore_errors=True)
+        cfg_dir = os.path.join(os.environ.get('APPDATA', os.path.expanduser('~')), 'NetSwitch')
+        if os.path.exists(cfg_dir):
+            shutil.rmtree(cfg_dir, ignore_errors=True)
     except Exception:
         pass
-    running_from_install = _is_running_from_install_dir()
-    if running_from_install:
-        _unregister_uninstall()
-        try:
-            if os.path.exists(CONFIG_DIR):
-                shutil.rmtree(CONFIG_DIR, ignore_errors=True)
-        except Exception:
-            pass
-        bat = os.path.join(tempfile.mkdtemp(), '_uninstall.bat')
-        with open(bat, 'w') as f:
-            f.write('@echo off\n')
-            f.write('timeout /t 2 /nobreak >nul\n')
-            f.write(f'rmdir /s /q "{INSTALL_DIR}"\n')
-            f.write(f'del "%~f0"\n')
-        subprocess.Popen([bat], creationflags=subprocess.CREATE_NO_WINDOW)
-    else:
-        try:
-            if os.path.exists(INSTALL_DIR):
-                shutil.rmtree(INSTALL_DIR, ignore_errors=True)
-        except Exception:
-            pass
+    try:
+        if os.path.exists(INSTALL_DIR):
+            shutil.rmtree(INSTALL_DIR, ignore_errors=True)
+    except Exception:
+        pass
     sys.exit(0)
 
 
@@ -515,25 +461,16 @@ def _check_update() -> None:
         if _parse(remote_ver) <= _parse(VERSION):
             return
         show_notification('Update', f'v{remote_ver} available')
-        tmp_dir = tempfile.mkdtemp(prefix='NetSwitchUpdate_')
-        tmp = os.path.join(tmp_dir, 'NetSwitch.exe')
-        try:
-            urllib.request.urlretrieve(download_url, tmp)
-            if not os.path.exists(tmp) or os.path.getsize(tmp) < 100000:
-                show_notification('Update', t('update_failed'))
-                return
-        except Exception:
-            show_notification('Update', t('update_failed'))
-            return
-        me = os.path.abspath(sys.argv[0])
-        bat = os.path.join(tmp_dir, '_update.bat')
+        tmp = os.path.join(INSTALL_DIR, 'NetSwitch.exe.tmp')
+        urllib.request.urlretrieve(download_url, tmp)
+        me = sys.executable
+        bat = os.path.join(INSTALL_DIR, '_update.bat')
         with open(bat, 'w') as f:
             f.write('@echo off\n')
-            f.write('timeout /t 3 /nobreak >nul\n')
+            f.write('timeout /t 2 /nobreak >nul\n')
             f.write(f'copy /y "{tmp}" "{me}"\n')
             f.write(f'del "{tmp}"\n')
             f.write(f'start "" "{me}"\n')
-            f.write(f'rmdir /s /q "{tmp_dir}"\n')
             f.write(f'del "%~f0"\n')
         subprocess.Popen([bat], creationflags=subprocess.CREATE_NO_WINDOW)
         sys.exit(0)
@@ -585,16 +522,13 @@ def _delete_tray() -> None:
 
 def _show_menu() -> None:
     menu = win32gui.CreatePopupMenu()
-    try:
-        win32gui.AppendMenu(menu, win32con.MF_STRING, IDC_SHOW, t('show_window'))
-        win32gui.AppendMenu(menu, win32con.MF_SEPARATOR, 0, '')
-        win32gui.AppendMenu(menu, win32con.MF_STRING, IDC_EXIT, t('exit'))
-        pos = win32gui.GetCursorPos()
-        win32gui.SetForegroundWindow(_tray_hwnd)
-        win32gui.TrackPopupMenu(menu, win32con.TPM_LEFTALIGN, pos[0], pos[1], 0, _tray_hwnd, None)
-        win32gui.PostMessage(_tray_hwnd, win32con.WM_NULL, 0, 0)
-    finally:
-        win32gui.DestroyMenu(menu)
+    win32gui.AppendMenu(menu, win32con.MF_STRING, IDC_SHOW, t('show_window'))
+    win32gui.AppendMenu(menu, win32con.MF_SEPARATOR, 0, '')
+    win32gui.AppendMenu(menu, win32con.MF_STRING, IDC_EXIT, t('exit'))
+    pos = win32gui.GetCursorPos()
+    win32gui.SetForegroundWindow(_tray_hwnd)
+    win32gui.TrackPopupMenu(menu, win32con.TPM_LEFTALIGN, pos[0], pos[1], 0, _tray_hwnd, None)
+    win32gui.PostMessage(_tray_hwnd, win32con.WM_NULL, 0, 0)
 
 
 def _tray_wndproc(hwnd: int, msg: int, wparam: int, lparam: int) -> int:
@@ -630,7 +564,6 @@ def setup_tray() -> None:
 def _sigint_handler(sig: int, frame) -> None:
     global _exit_flag
     _exit_flag = True
-    cleanup()
 
 
 # ─── main ──────────────────────────────────────────────────────
@@ -696,10 +629,6 @@ def main() -> None:
         else:
             _do_install()
 
-    if not _acquire_mutex():
-        show_notification('NetSwitch', t('already_running'))
-        sys.exit(0)
-
     hwnd_console = ctypes.windll.kernel32.GetConsoleWindow()
     if hwnd_console:
         ctypes.windll.user32.ShowWindow(hwnd_console, 0)
@@ -708,9 +637,6 @@ def main() -> None:
         elevate()
 
     _hotkey_str = resolve_hotkey(config.get('hotkey', 'end'))
-    valid, reason = _validate_hotkey(_hotkey_str)
-    if not valid:
-        _hotkey_str = 'end'
 
     if not _register_hotkey(_hotkey_str):
         _hotkey_str = 'end'
