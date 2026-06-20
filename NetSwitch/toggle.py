@@ -79,13 +79,13 @@ _DNS_HOSTS = ['google.com', 'cloudflare.com', 'ya.ru']
 def check_internet() -> bool:
     for host in _DNS_HOSTS:
         try:
-            socket.create_connection((host, 53), timeout=1)
+            socket.create_connection((host, 53), timeout=0.3)
             return True
         except (OSError, socket.timeout):
             continue
     for target in _PING_TARGETS:
         try:
-            rc, _, _ = _run(['ping', '-n', '1', '-w', '500', target])
+            rc, _, _ = _run(['ping', '-n', '1', '-w', '300', target])
             if rc == 0:
                 return True
         except Exception:
