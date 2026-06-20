@@ -227,20 +227,6 @@ pip install pyinstaller
 
 ---
 
-## ⭐Поддержка проекта
-
-Вы можете поддержать проект, поставив :star: этому репозиторию (сверху справа этой страницы)
-
-<a href="https://star-history.com/#pro72rus-dev/NetSwitch&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pro72rus-dev/NetSwitch&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pro72rus-dev/NetSwitch&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=pro72rus-dev/NetSwitch&type=Date" />
- </picture>
-</a>
-
----
-
 ## ⚖️Лицензирование
 
 Проект распространяется на условиях лицензии [MIT](LICENSE)
