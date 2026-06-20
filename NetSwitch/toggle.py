@@ -1,3 +1,4 @@
+import socket
 import subprocess
 
 _si = subprocess.STARTUPINFO()
@@ -71,13 +72,20 @@ def enable_adapters(adapter_names: list[str]) -> list[str]:
     return errors
 
 
-_PING_TARGETS = ['8.8.8.8', '1.1.1.1', '114.114.114.114']
+_PING_TARGETS = ['8.8.8.8', '1.1.1.1', '9.9.9.9']
+_DNS_HOSTS = ['google.com', 'cloudflare.com', 'ya.ru']
 
 
 def check_internet() -> bool:
+    for host in _DNS_HOSTS:
+        try:
+            socket.create_connection((host, 53), timeout=1)
+            return True
+        except (OSError, socket.timeout):
+            continue
     for target in _PING_TARGETS:
         try:
-            rc, _, _ = _run(['ping', '-n', '1', '-w', '200', target])
+            rc, _, _ = _run(['ping', '-n', '1', '-w', '500', target])
             if rc == 0:
                 return True
         except Exception:

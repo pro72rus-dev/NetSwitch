@@ -95,11 +95,11 @@ def _do_show(title, message, x, y, ww, wh):
 
     _root.deiconify()
     _force_topmost(_root.winfo_id())
-    _fade(0.0, 0.88, 8)
-    _fade_job = _root.after(2500, lambda: _fade(0.88, 0.0, 8))
+    _fade(0.0, 0.9, 12, 15)
+    _fade_job = _root.after(2500, lambda: _fade(0.9, 0.0, 12, 15))
 
 
-def _fade(start, end, steps):
+def _fade(start, end, steps, delay_ms=15):
     global _fade_job
     if not _root:
         return
@@ -112,7 +112,7 @@ def _fade(start, end, steps):
             return
         if i < len(vals):
             _root.attributes('-alpha', vals[i])
-            _fade_job = _root.after(20, lambda: apply(i + 1))
+            _fade_job = _root.after(delay_ms, lambda: apply(i + 1))
         elif end == 0.0:
             _root.withdraw()
 
@@ -123,4 +123,4 @@ def hide_notification():
     _ensure()
     if _root:
         _cancel_fade()
-        _root.after(0, lambda: _fade(0.88, 0.0, 5))
+        _root.after(0, lambda: _fade(0.9, 0.0, 8, 15))
