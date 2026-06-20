@@ -2,185 +2,131 @@
 
 # <img src="https://cdn-icons-png.flaticon.com/128/3899/3899864.png" height=28 /> NetSwitch
 
-**Отключение и включение интернета одной клавишей** | **Toggle internet with a single hotkey**
+**Отключение и включение интернета одной клавишей**
 
-[**Скачать / Download**](https://github.com/pro72rus-dev/NetSwitch/releases/latest/download/NetSwitch.exe) · [**Релизы / Releases**](https://github.com/pro72rus-dev/NetSwitch/releases)
-
-[English](#english) · [Русский](#русский)
+[**Скачать NetSwitch.exe**](https://github.com/pro72rus-dev/NetSwitch/releases/latest/download/NetSwitch.exe) · [**Страница релизов**](https://github.com/pro72rus-dev/NetSwitch/releases)
 
 </div>
 
----
+> [!IMPORTANT]
+>
+> ### Как это работает
+> NetSwitch отключает/включает **все сетевые адаптеры** через `netsh`.  
+> Это не обход блокировок и не прокси — это физическое отключение сети одной клавишей.  
+> Полезно для быстрого обесточивания ПК от интернета.
 
-# English
+## ⚙️Установка и использование
 
-## ⚡Features
-
-- **Instant toggle** — disable/enable all network adapters with one hotkey
-- **Works over games** — notifications appear above fullscreen/borderless applications
-- **System tray** — runs in background, doesn't clutter your taskbar
-- **Dark GUI** — minimal interface with hotkey configuration
-- **EN/RU** — full language support for interface and notifications
-- **Russian keyboard** — auto-detects keys from Russian layout
-- **Auto-install** — first run installs to `%LOCALAPPDATA%\NetSwitch`
-- **Self-update** — checks for updates on startup
-- **Clean uninstall** — `NetSwitch.exe --uninstall`
-
-## ⚙️Installation
-
-1. Download [**NetSwitch.exe**](https://github.com/pro72rus-dev/NetSwitch/releases/latest/download/NetSwitch.exe)
-2. Run it — installation is automatic
-3. Done! Press `Ctrl + End` to toggle internet
-
-> [!TIP]
-> NetSwitch installs itself to `%LOCALAPPDATA%\NetSwitch` and registers in Windows "Add or Remove Programs".
-
-## 🖱️Usage
-
-| Action | How |
-|--------|-----|
-| Toggle internet | `Ctrl + End` |
-| Open window | Double-click tray icon |
-| Minimize to tray | `─` button in title bar |
-| Change hotkey | **Change** → press keys → **Confirm** |
-| Switch language | `EN` / `RU` button in title bar |
-| Uninstall | `NetSwitch.exe --uninstall` |
-
-## 🔑Hotkeys
-
-Default: `Ctrl + End`
-
-Supported combinations:
-- `Ctrl`, `Alt`, `Shift`, `Win` + any key
-- `F1`–`F24`, `End`, `Home`, `Delete`, `Insert`, `Page Up/Down`
-- `Space`, `Enter`, `Tab`, `Backspace`, `Caps Lock`, `Num Lock`
-
-> [!NOTE]
-> Single letters and digits are not allowed as hotkeys to avoid accidental triggers.
-
-## 🛠️Building from source
-
-### Requirements
-
-- Python 3.11+
-- Windows 10/11
-
-### Setup
-
-```bash
-git clone https://github.com/pro72rus-dev/NetSwitch.git
-cd NetSwitch
-pip install -r requirements.txt
-```
-
-### Build exe
-
-```bash
-pip install pyinstaller
-.\build.ps1
-```
-
-Output: `NetSwitch/release/NetSwitch.exe`
-
-## 📁Project structure
-
-```
-NetSwitch/
-├── main.py          # Entry point, hotkeys, tray, auto-install, self-update
-├── gui.py           # Dark GUI (tkinter), hotkey binding
-├── toggle.py        # Adapter management (netsh), parallel toggle
-├── notifier.py      # Overlay notifications (topmost, fade-in/out)
-├── strings.py       # Localization (EN/RU)
-├── build.ps1        # Build script
-├── requirements.txt # Dependencies
-└── start.bat        # Run from source
-```
-
-## ❓FAQ
-
-### Nothing happens when I press the hotkey
-
-Make sure NetSwitch is running (check the system tray). The hotkey is global and works from any application.
-
-### Notifications don't appear over my game
-
-NetSwitch uses `WS_EX_TOPMOST` to stay above fullscreen windows. If your game uses exclusive fullscreen, try switching to borderless windowed mode.
-
-### How to change the hotkey?
-
-1. Open the NetSwitch window (double-click tray icon)
-2. Click **Change**
-3. Press your desired key combination
-4. Click **Confirm**
-
-### The hotkey shows Russian letters
-
-This is fixed — all keys are automatically converted to English layout regardless of your current keyboard layout.
-
-### How to completely remove NetSwitch?
-
-Run `NetSwitch.exe --uninstall` — this removes the executable, config folder, and registry entries.
-
-## ⚖️License
-
-[MIT](LICENSE) © [pro72rus](https://github.com/pro72rus-dev)
-
----
-
-# Русский
-
-## ⚡Возможности
-
-- **Мгновенное переключение** — отключение и включение всех адаптеров одной клавишей
-- **Работает поверх игр** — уведомления отображаются поверх полноэкранных приложений
-- **Системный трей** — работает в фоне, не засоряет панель задач
-- **Тёмный интерфейс** — минималистичный GUI с настройкой клавиши
-- **EN/RU** — полная поддержка языков для интерфейса и уведомлений
-- **Русская клавиатура** — автоматическое распознавание клавиш с русской раскладки
-- **Автоустановка** — при первом запуске устанавливается в `%LOCALAPPDATA%\NetSwitch`
-- **Самообновление** — проверка обновлений при запуске
-- **Чистая деинсталляция** — `NetSwitch.exe --uninstall`
-
-## ⚙️Установка
+### Установка
 
 1. Скачайте [**NetSwitch.exe**](https://github.com/pro72rus-dev/NetSwitch/releases/latest/download/NetSwitch.exe)
-2. Запустите файл — установка происходит автоматически
-3. Готово! Нажмите `Ctrl + End` для отключения интернета
+2. Запустите файл — установка происходит автоматически в `%LOCALAPPDATA%\NetSwitch`
+3. Программа зарегистрируется в «Установка и удаление программ» Windows
+4. Готово! Нажмите `Ctrl + End` для отключения интернета
 
 > [!TIP]
-> NetSwitch устанавливается в `%LOCALAPPDATA%\NetSwitch` и регистрируется в «Установка и удаление программ» Windows.
+> При первом запуске появится приветственное уведомление. Горячая клавиша по умолчанию — `Ctrl + End`.
 
-## 🖱️Использование
+### Использование
 
 | Действие | Как |
 |----------|-----|
-| Вкл/Выкл интернет | `Ctrl + End` |
+| Вкл/Выкл интернет | `Ctrl + End` (или настроенная комбинация) |
 | Открыть окно | Двойной клик по иконке в трее |
-| Скрыть в трей | Кнопка `─` в заголовке |
-| Сменить клавишу | **Change** → нажать комбинацию → **Confirm** |
+| Скрыть в трей | Кнопка `─` в заголовке окна |
+| Сменить горячую клавишу | **Change** → нажать комбинацию → **Confirm** |
 | Сменить язык | Кнопка `EN` / `RU` в заголовке |
-| Удалить | `NetSwitch.exe --uninstall` |
+| Полностью удалить | `NetSwitch.exe --uninstall` |
 
 ## 🔑Горячие клавиши
 
 По умолчанию: `Ctrl + End`
 
 Поддерживаются комбинации:
-- `Ctrl`, `Alt`, `Shift`, `Win` + любая клавиша
-- `F1`–`F24`, `End`, `Home`, `Delete`, `Insert`, `Page Up/Down`
-- `Space`, `Enter`, `Tab`, `Backspace`, `Caps Lock`, `Num Lock`
+- Модификаторы: `Ctrl`, `Alt`, `Shift`, `Win`
+- Специальные клавиши: `F1`–`F24`, `End`, `Home`, `Delete`, `Insert`, `Page Up/Down`
+- Системные: `Space`, `Enter`, `Tab`, `Backspace`, `Caps Lock`, `Num Lock`
 
 > [!NOTE]
-> Одиночные буквы и цифры запрещены в качестве горячих клавиш для защиты от случайного срабатывания.
+> Одиночные буквы и цифры запрещены в качестве горячих клавиш — это защита от случайного срабатывания.  
+> Русская раскладка клавиатуры поддерживается автоматически — клавиши распознаются по физическому расположению.
 
-## 🛠️Сборка из исходников
+## 📁Файлы проекта
+
+- [**`main.py`**](./NetSwitch/main.py) — точка входа, глобальные горячие клавиши, системный трей, автоустановка, самообновление
+- [**`gui.py`**](./NetSwitch/gui.py) — тёмный графический интерфейс (tkinter), привязка горячих клавиш
+- [**`toggle.py`**](./NetSwitch/toggle.py) — управление сетевыми адаптерами через `netsh`, параллельное включение/отключение
+- [**`notifier.py`**](./NetSwitch/notifier.py) — оверлей-уведомления поверх полноэкранных игр (topmost, fade-in/out)
+- [**`strings.py`**](./NetSwitch/strings.py) — локализация интерфейса и уведомлений (EN / RU)
+- [**`build.ps1`**](./NetSwitch/build.ps1) — скрипт сборки exe через PyInstaller
+- [**`requirements.txt`**](./NetSwitch/requirements.txt) — зависимости (keyboard, pywin32)
+- [**`start.bat`**](./NetSwitch/start.bat) — запуск из исходников без сборки
+
+## ☑️Частые вопросы и проблемы
+
+### Ничего не происходит при нажатии горячей клавиши
+
+- Убедитесь, что NetSwitch запущен — проверьте иконку в системном трее (справа внизу, рядом с часами)
+- Горячая клавиша работает глобально — из любого приложения, включая игры
+- Если иконки нет в трее, запустите `NetSwitch.exe` заново
+
+### Уведомления не отображаются поверх игры
+
+- NetSwitch использует `WS_EX_TOPMOST` для отображения поверх окон
+- Если игра использует **эксклюзивный полный экран** — переключите её в **оконный** или **безрамочный** режим
+- Уведомления появляются в правом нижнем углу и исчезают через 2.5 секунды
+
+### Как сменить горячую клавишу?
+
+1. Дважды кликните по иконке NetSwitch в трее — откроется окно
+2. Нажмите кнопку **Change**
+3. Нажмите нужную комбинацию клавиш (например `Ctrl+K`)
+4. Нажмите зелёную кнопку **Confirm** для подтверждения
+
+> [!CAUTION]
+> Если нажать **Cancel** или не нажать **Confirm** в течение 30 секунд — старая клавиша восстановится автоматически.
+
+### В интерфейсе отображаются русские буквы вместо английских
+
+- Это исправлено в текущей версии
+- Все клавиши автоматически конвертируются в английскую раскладку
+- `alt+у` будет отображаться как `alt+e` — это нормально
+
+### Программа требует права администратора
+
+- NetSwitch управляет сетевыми адаптерами через `netsh`, для этого нужны права администратора
+- При запуске Windows запросит повышение прав (UAC)
+- Это необходимо для отключения/включения адаптеров
+
+### Как полностью удалить NetSwitch?
+
+Запустите:
+```
+NetSwitch.exe --uninstall
+```
+Это удалит:
+- Файл `NetSwitch.exe` из `%LOCALAPPDATA%\NetSwitch`
+- Папку конфига `%APPDATA%\NetSwitch`
+- Записи из реестра Windows («Установка и удаление программ»)
+
+### Интерфейс на английском, но я хочу русский
+
+- Нажмите кнопку `EN` в заголовке окна — переключится на `RU`
+- Язык сохраняется в конфиге и запоминается между запусками
+
+### Не нашли свою проблему?
+
+- Создайте [**Issue**](https://github.com/pro72rus-dev/NetSwitch/issues) в репозитории
+
+## 🗒️Сборка из исходников
 
 ### Требования
 
 - Python 3.11+
 - Windows 10/11
+- PyInstaller (для сборки exe)
 
-### Установка
+### Установка зависимостей
 
 ```bash
 git clone https://github.com/pro72rus-dev/NetSwitch.git
@@ -195,55 +141,29 @@ pip install pyinstaller
 .\build.ps1
 ```
 
-Результат: `NetSwitch/release/NetSwitch.exe`
+Готовый файл: `NetSwitch/release/NetSwitch.exe`
 
-## 📁Структура проекта
+> [!NOTE]
+> Собранный exe автоматически устанавливается при первом запуске. Отдельный установщик не требуется.
 
-```
-NetSwitch/
-├── main.py          # Точка входа, горячие клавиши, трей, автоустановка
-├── gui.py           # Тёмный GUI (tkinter), привязка клавиш
-├── toggle.py        # Управление адаптерами (netsh), параллельный toggle
-├── notifier.py      # Оверлей-уведомления (topmost, fade-in/out)
-├── strings.py       # Локализация (EN/RU)
-├── build.ps1        # Скрипт сборки
-├── requirements.txt # Зависимости
-└── start.bat        # Запуск из исходников
-```
+## ⭐Поддержка проекта
 
-## ❓Частые вопросы
+Вы можете поддержать проект, поставив :star: этому репозиторию (сверху справа этой страницы)
 
-### Ничего не происходит при нажатии горячей клавиши
+<a href="https://star-history.com/#pro72rus-dev/NetSwitch&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pro72rus-dev/NetSwitch&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pro72rus-dev/NetSwitch&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=pro72rus-dev/NetSwitch&type=Date" />
+ </picture>
+</a>
 
-Убедитесь, что NetSwitch запущен (проверьте системный трей). Горячая клавиша глобальная и работает из любого приложения.
+## ⚖️Лицензирование
 
-### Уведомления не отображаются поверх игры
+Проект распространяется на условиях лицензии [MIT](LICENSE)
 
-NetSwitch использует `WS_EX_TOPMOST` для отображения поверх окон. Если игра использует эксклюзивный полный экран, переключите её в оконный или безрамочный режим.
+## 🩷Автор
 
-### Как сменить горячую клавишу?
+**pro72rus** — разработка и поддержка
 
-1. Откройте окно NetSwitch (двойной клик по иконке в трее)
-2. Нажмите **Change**
-3. Нажмите нужную комбинацию клавиш
-4. Нажмите **Confirm**
-
-### В интерфейсе отображаются русские буквы
-
-Это исправлено — все клавиши автоматически конвертируются в английскую раскладку независимо от текущей раскладки клавиатуры.
-
-### Как полностью удалить NetSwitch?
-
-Запустите `NetSwitch.exe --uninstall` — это удалит exe, папку конфига и записи реестра.
-
-## ⚖️Лицензия
-
-[MIT](LICENSE) © [pro72rus](https://github.com/pro72rus-dev)
-
----
-
-<div align="center">
-
-⭐ Если проект понравился — поставьте звёздку!
-
-</div>
+[![Contributors](https://contrib.rocks/image?repo=pro72rus-dev/NetSwitch)](https://github.com/pro72rus-dev/NetSwitch/graphs/contributors)
