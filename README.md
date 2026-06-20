@@ -124,8 +124,6 @@ pip install pyinstaller
 .\build.ps1
 ```
 
-Готовый файл: `NetSwitch/release/NetSwitch.exe`
-
 > [!NOTE]
 > Собранный exe автоматически устанавливается при первом запуске. Отдельный установщик не требуется.
 
