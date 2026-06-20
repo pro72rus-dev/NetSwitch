@@ -12,8 +12,8 @@ release/
 .env
 config.json
 .wix/
-internet-toggle/release/
-internet-toggle/build/
-internet-toggle/dist/
-internet-toggle/*.spec
-internet-toggle/__pycache__/
+NetSwitch/release/
+NetSwitch/build/
+NetSwitch/dist/
+NetSwitch/*.spec
+NetSwitch/__pycache__/
