@@ -24,7 +24,7 @@ from gui import (set_callbacks, show_window, hide_window, update_status,
                  show_captured_hotkey, update_version, get_root)
 from strings import set_lang, get_lang, t
 
-VERSION = '1.0.2'
+VERSION = '1.0.3'
 UPDATE_URL = 'https://raw.githubusercontent.com/pro72rus-dev/NetSwitch/main/update.json'
 
 _mutex = None
@@ -154,6 +154,7 @@ def save_config(cfg: dict) -> None:
 
 def cleanup() -> None:
     global internet_off, disabled_adapter_names
+    _stop_hotkey_thread()
     with _lock:
         if internet_off and disabled_adapter_names:
             enable_adapters(disabled_adapter_names)
@@ -162,8 +163,8 @@ def cleanup() -> None:
 
 
 def _wait_internet(names: list[str]) -> None:
-    for _ in range(20):
-        time.sleep(0.5)
+    for _ in range(50):
+        time.sleep(0.2)
         if check_internet():
             show_notification(t('enabled'), '\n'.join(names))
             return
@@ -263,6 +264,99 @@ def _register_hotkey(hotkey: str) -> bool:
         return False
 
 
+_VK_MAP = {
+    'backspace': 0x08, 'tab': 0x09, 'enter': 0x0D, 'space': 0x20,
+    'caps lock': 0x14, 'escape': 0x1B, 'esc': 0x1B,
+    'page up': 0x21, 'page down': 0x22, 'end': 0x23, 'home': 0x24,
+    'left': 0x25, 'up': 0x26, 'right': 0x27, 'down': 0x28,
+    'print screen': 0x2C, 'prtsc': 0x2C, 'insert': 0x2D, 'delete': 0x2E,
+    '0': 0x30, '1': 0x31, '2': 0x32, '3': 0x33, '4': 0x34,
+    '5': 0x35, '6': 0x36, '7': 0x37, '8': 0x38, '9': 0x39,
+    'a': 0x41, 'b': 0x42, 'c': 0x43, 'd': 0x44, 'e': 0x45,
+    'f': 0x46, 'g': 0x47, 'h': 0x48, 'i': 0x49, 'j': 0x4A,
+    'k': 0x4B, 'l': 0x4C, 'm': 0x4D, 'n': 0x4E, 'o': 0x4F,
+    'p': 0x50, 'q': 0x51, 'r': 0x52, 's': 0x53, 't': 0x54,
+    'u': 0x55, 'v': 0x56, 'w': 0x57, 'x': 0x58, 'y': 0x59,
+    'z': 0x5A, 'num lock': 0x90, 'scroll lock': 0x91,
+    'numpad0': 0x60, 'numpad1': 0x61, 'numpad2': 0x62, 'numpad3': 0x63,
+    'numpad4': 0x64, 'numpad5': 0x65, 'numpad6': 0x66, 'numpad7': 0x67,
+    'numpad8': 0x68, 'numpad9': 0x69, 'numpad*': 0x6A, 'numpad+': 0x6B,
+    'numpad-': 0x6D, 'numpad.': 0x6E, 'numpad/': 0x6F,
+    'f1': 0x70, 'f2': 0x71, 'f3': 0x72, 'f4': 0x73, 'f5': 0x74,
+    'f6': 0x75, 'f7': 0x76, 'f8': 0x77, 'f9': 0x78, 'f10': 0x79,
+    'f11': 0x7A, 'f12': 0x7B, 'f13': 0x7C, 'f14': 0x7D,
+    'f15': 0x7E, 'f16': 0x7F, 'f17': 0x80, 'f18': 0x81,
+    'f19': 0x82, 'f20': 0x83, 'f21': 0x84, 'f22': 0x85,
+    'f23': 0x86, 'f24': 0x87,
+    'shift': 0xA0, 'lshift': 0xA0, 'rshift': 0xA1,
+    'ctrl': 0xA2, 'lctrl': 0xA2, 'rctrl': 0xA3,
+    'control': 0xA2, 'alt': 0xA4, 'lalt': 0xA4, 'ralt': 0xA5,
+    'win': 0x5B, 'lwin': 0x5B, 'rwin': 0x5C,
+    'apps': 0x5D, 'browser back': 0xA6, 'browser forward': 0xA7,
+}
+
+_MODIFIER_VKS = {0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0x5B, 0x5C}
+
+_hotkey_thread = None
+_hotkey_stop = threading.Event()
+_hotkey_mods = set()
+_hotkey_key = 0
+
+
+def _start_hotkey_thread(hotkey: str):
+    global _hotkey_thread, _hotkey_stop, _hotkey_mods, _hotkey_key
+    _stop_hotkey_thread()
+    _hotkey_stop.clear()
+
+    parts = hotkey.lower().split('+')
+    _hotkey_mods = set()
+    _hotkey_key = 0
+    for p in parts:
+        vk = _VK_MAP.get(p)
+        if vk is None:
+            return False
+        if vk in _MODIFIER_VKS:
+            _hotkey_mods.add(vk)
+        else:
+            _hotkey_key = vk
+
+    if not _hotkey_key:
+        return False
+
+    _hotkey_thread = threading.Thread(target=_hotkey_poll_loop, daemon=True)
+    _hotkey_thread.start()
+    return True
+
+
+def _stop_hotkey_thread():
+    global _hotkey_thread
+    _hotkey_stop.set()
+    if _hotkey_thread:
+        _hotkey_thread.join(timeout=1)
+        _hotkey_thread = None
+
+
+def _hotkey_poll_loop():
+    user32 = ctypes.windll.user32
+    was_pressed = False
+    while not _hotkey_stop.is_set():
+        key_state = user32.GetAsyncKeyState(_hotkey_key) & 0x8000
+        if key_state and not was_pressed:
+            all_mods_pressed = True
+            for mod_vk in _hotkey_mods:
+                if not (user32.GetAsyncKeyState(mod_vk) & 0x8000):
+                    all_mods_pressed = False
+                    break
+            if all_mods_pressed:
+                try:
+                    toggle_internet()
+                except Exception:
+                    pass
+                time.sleep(0.3)
+        was_pressed = bool(key_state)
+        time.sleep(0.015)
+
+
 # ─── Hotkey apply / rebind / confirm ────────────────────────────
 
 def _release_modifier_keys():
@@ -276,7 +370,8 @@ def _apply_hotkey(raw_hotkey: str) -> bool:
     global _hotkey_str
     fixed = _fix_keyboard_layout(raw_hotkey)
     resolved = resolve_hotkey(fixed)
-    if not _register_hotkey(resolved):
+    _stop_hotkey_thread()
+    if not _start_hotkey_thread(resolved):
         return False
     _hotkey_str = resolved
     config = load_config()
@@ -288,17 +383,14 @@ def _apply_hotkey(raw_hotkey: str) -> bool:
 
 def _restore_hotkey(old_hotkey: str):
     global _hotkey_str
-    try:
-        keyboard.remove_all_hotkeys()
-    except Exception:
-        pass
-    if _register_hotkey(old_hotkey):
+    _stop_hotkey_thread()
+    if _start_hotkey_thread(old_hotkey):
         _hotkey_str = old_hotkey
         finish_capture_mode(old_hotkey)
         show_notification(t('cancelled'), old_hotkey)
     else:
         _hotkey_str = 'end'
-        _register_hotkey('end')
+        _start_hotkey_thread('end')
         update_hotkey('end')
         cfg = load_config()
         cfg['hotkey'] = 'end'
@@ -313,10 +405,7 @@ def _rebind_hotkey() -> None:
     _confirm_accepted = False
     _confirm_event.clear()
 
-    try:
-        keyboard.remove_all_hotkeys()
-    except Exception:
-        pass
+    _stop_hotkey_thread()
     start_capture_mode()
 
     try:
@@ -704,9 +793,9 @@ def main() -> None:
     if not valid:
         _hotkey_str = 'end'
 
-    if not _register_hotkey(_hotkey_str):
+    if not _start_hotkey_thread(_hotkey_str):
         _hotkey_str = 'end'
-        if not _register_hotkey('end'):
+        if not _start_hotkey_thread('end'):
             print('Critical error: failed to register hotkey')
             sys.exit(1)
         update_hotkey('end')
