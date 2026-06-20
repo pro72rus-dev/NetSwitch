@@ -1,3 +1,4 @@
+import os
 import threading
 import tkinter as tk
 import ctypes
@@ -31,6 +32,7 @@ _hotkey_section_label = None
 _is_capturing = False
 _status_dot = None
 _version_label = None
+_made_by_label = None
 _internet_off = False
 
 BG = '#2b2b2b'
@@ -41,6 +43,48 @@ RED = '#f44336'
 DIM = '#666666'
 WHITE = '#ffffff'
 
+# ─── colour animation ──────────────────────────────────────────
+
+_anim_job = None
+
+def _hex_to_rgb(h: str) -> tuple:
+    h = h.lstrip('#')
+    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+def _rgb_to_hex(r, g, b) -> str:
+    return f'#{int(r):02x}{int(g):02x}{int(b):02x}'
+
+def _animate_status(from_color: str, to_color: str, steps: int = 24, delay: int = 8):
+    """Плавно меняет цвет точки и текста статуса."""
+    global _anim_job
+    if _anim_job is not None:
+        try:
+            _root.after_cancel(_anim_job)
+        except Exception:
+            pass
+        _anim_job = None
+
+    fr, fg_c, fb = _hex_to_rgb(from_color)
+    tr, tg, tb = _hex_to_rgb(to_color)
+
+    def step(i):
+        global _anim_job
+        if not _root or not _status_dot or not _status_label:
+            return
+        t_val = i / steps
+        r = fr + (tr - fr) * t_val
+        g = fg_c + (tg - fg_c) * t_val
+        b = fb + (tb - fb) * t_val
+        color = _rgb_to_hex(r, g, b)
+        _status_dot.config(fg=color)
+        _status_label.config(fg=color)
+        if i < steps:
+            _anim_job = _root.after(delay, lambda: step(i + 1))
+
+    step(0)
+
+
+# ─── window callbacks ──────────────────────────────────────────
 
 def _on_minimize_click():
     if _on_minimize and not _is_capturing:
@@ -48,8 +92,6 @@ def _on_minimize_click():
 
 
 def _on_close_click():
-    if _is_capturing:
-        return
     if _on_exit:
         _on_exit()
 
@@ -120,19 +162,25 @@ def _refresh_lang():
         _rebind_btn.config(text=t('change') if not _is_capturing else t('cancel'))
         _confirm_btn.config(text=t('confirm'))
         _lang_btn.config(text=t('lang_btn'))
+        _made_by_label.config(text=f"{t('made_by')} pro72rus")
         if _internet_off:
-            _status_label.config(text=t('disconnected'), fg=RED)
+            _status_label.config(text=t('disconnected'))
             _status_dot.config(fg=RED)
+            _status_label.config(fg=RED)
         else:
-            _status_label.config(text=t('connected'), fg=GREEN)
+            _status_label.config(text=t('connected'))
             _status_dot.config(fg=GREEN)
+            _status_label.config(fg=GREEN)
     _root.after(0, _do)
 
 
+# ─── main window ───────────────────────────────────────────────
+
 def _loop():
     global _root, _title_bar, _status_label, _hotkey_label, _rebind_btn, _rebind_hint
-    global _confirm_btn, _status_dot, _version_label, _lang_btn, _hotkey_section_label
-    global _status_section_label
+    global _confirm_btn, _status_dot, _version_label, _made_by_label, _lang_btn
+    global _hotkey_section_label, _status_section_label
+
     _root = tk.Tk()
     _root.title('NetSwitch')
     _root.configure(bg=BG)
@@ -140,11 +188,11 @@ def _loop():
     _root.overrideredirect(True)
     _root.attributes('-topmost', True)
 
-    ww, wh = 320, 250
+    ww, wh = 320, 230
     sw = _root.winfo_screenwidth()
     sh = _root.winfo_screenheight()
     x = (sw - ww) // 2
-    y = (sh - wh) // 2
+    y = sh // 4
     _root.geometry(f'{ww}x{wh}+{x}+{y}')
 
     _title_bar = tk.Frame(_root, bg=BAR, height=32)
@@ -179,7 +227,7 @@ def _loop():
     content.pack(fill='both', expand=True, padx=14, pady=(10, 12))
 
     section_status = tk.Frame(content, bg=BG)
-    section_status.pack(fill='x', pady=(0, 10))
+    section_status.pack(fill='x', pady=(0, 8))
 
     _status_section_label = tk.Label(section_status, text=t('status'), font=('Segoe UI', 8),
              bg=BG, fg=DIM, anchor='w')
@@ -197,10 +245,10 @@ def _loop():
     _status_label.pack(side='left')
 
     sep = tk.Frame(content, bg=ACCENT, height=1)
-    sep.pack(fill='x', pady=(0, 10))
+    sep.pack(fill='x', pady=(0, 8))
 
     section_hotkey = tk.Frame(content, bg=BG)
-    section_hotkey.pack(fill='x', pady=(0, 10))
+    section_hotkey.pack(fill='x', pady=(0, 8))
 
     _hotkey_section_label = tk.Label(section_hotkey, text=t('hotkey_label'), font=('Segoe UI', 8),
                                      bg=BG, fg=DIM, anchor='w')
@@ -234,9 +282,10 @@ def _loop():
     _rebind_hint.pack(fill='x', pady=(4, 0))
 
     dev_frame = tk.Frame(content, bg=BG)
-    dev_frame.pack(fill='x', pady=(10, 0))
-    tk.Label(dev_frame, text='made by pro72rus', font=('Segoe UI', 7, 'bold'),
-             bg=BG, fg='#aaa').pack(side='left')
+    dev_frame.pack(fill='x', pady=(8, 0))
+    _made_by_label = tk.Label(dev_frame, text=f"{t('made_by')} pro72rus",
+                              font=('Segoe UI', 7, 'bold'), bg=BG, fg='#aaa')
+    _made_by_label.pack(side='left')
     _version_label = tk.Label(dev_frame, text='', font=('Segoe UI', 7),
                               bg=BG, fg='#666')
     _version_label.pack(side='right')
@@ -280,7 +329,7 @@ def _ensure():
 
 
 def set_callbacks(on_rebind=None, on_cancel_capture=None, on_confirm=None,
-                  on_exit=None, on_minimize=None, on_lang=None):
+                  on_exit=None, on_minimize=None, on_lang=None, on_mode=None):
     global _on_rebind, _on_cancel_capture, _on_confirm, _on_exit, _on_minimize, _on_lang
     _on_rebind = on_rebind
     _on_cancel_capture = on_cancel_capture
@@ -288,10 +337,6 @@ def set_callbacks(on_rebind=None, on_cancel_capture=None, on_confirm=None,
     _on_exit = on_exit
     _on_minimize = on_minimize
     _on_lang = on_lang
-
-
-def set_lang_callback():
-    pass
 
 
 def show_window():
@@ -310,13 +355,16 @@ def update_status(internet_off: bool):
     global _internet_off
     _internet_off = internet_off
     _ensure()
-    if _status_label and _status_dot:
-        if internet_off:
-            _root.after(0, lambda: (_status_label.config(text=t('disconnected'), fg=RED),
-                                    _status_dot.config(fg=RED)))
-        else:
-            _root.after(0, lambda: (_status_label.config(text=t('connected'), fg=GREEN),
-                                    _status_dot.config(fg=GREEN)))
+    if not _status_label or not _status_dot:
+        return
+    if internet_off:
+        current = _status_dot.cget('fg')
+        _status_label.config(text=t('disconnected'))
+        _root.after(0, lambda: _animate_status(current, RED))
+    else:
+        current = _status_dot.cget('fg')
+        _status_label.config(text=t('connected'))
+        _root.after(0, lambda: _animate_status(current, GREEN))
 
 
 def update_hotkey(hotkey: str):
@@ -328,7 +376,12 @@ def update_hotkey(hotkey: str):
 def update_version(version: str):
     _ensure()
     if _version_label:
-        _root.after(0, lambda: _version_label.config(text=version))
+        _version_label.config(text=version)
+        _root.update()
+
+
+def update_mode(mode: str):
+    pass
 
 
 def get_root():

@@ -70,7 +70,7 @@ def show_notification(title, message):
         return
     sw = _root.winfo_screenwidth()
     sh = _root.winfo_screenheight()
-    ww, wh = 260, 52
+    ww, wh = 260, 60
     x = sw - ww - 16
     y = sh - wh - 80
     _root.after(0, lambda: _do_show(title, message, x, y, ww, wh))

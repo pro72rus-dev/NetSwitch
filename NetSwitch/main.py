@@ -17,14 +17,16 @@ import win32api
 import win32con
 import win32gui
 
-from toggle import get_active_adapters, disable_adapters, enable_adapters, check_internet
+from toggle import (get_active_adapters, disable_adapters, enable_adapters,
+                     check_internet, filter_display_names)
 from notifier import show_notification
 from gui import (set_callbacks, show_window, hide_window, update_status,
                  update_hotkey, start_capture_mode, finish_capture_mode,
-                 show_captured_hotkey, update_version, get_root)
+                 show_captured_hotkey, update_version, get_root,
+                 update_mode)
 from strings import set_lang, get_lang, t
 
-VERSION = '1.0.3'
+VERSION = '1.0.5'
 UPDATE_URL = 'https://raw.githubusercontent.com/pro72rus-dev/NetSwitch/main/update.json'
 
 _mutex = None
@@ -48,6 +50,8 @@ _config_lock = threading.Lock()
 disabled_adapter_names: list[str] = []
 internet_off = False
 _last_toggle: float = 0
+
+_mode = 'adapters'
 
 _exit_flag = False
 _hotkey_str = 'end'
@@ -129,7 +133,7 @@ def elevate() -> None:
 
 
 def load_config() -> dict:
-    default = {'hotkey': 'end', 'lang': 'en'}
+    default = {'hotkey': 'end', 'lang': 'en', 'mode': 'all', 'app_path': ''}
     with _config_lock:
         if os.path.exists(CONFIG_FILE):
             try:
@@ -163,13 +167,17 @@ def cleanup() -> None:
 
 
 def _wait_internet(names: list[str]) -> None:
-    time.sleep(1)
-    for _ in range(300):
+    display = filter_display_names(names)
+    for _ in range(6000):
         time.sleep(0.01)
         if check_internet():
-            show_notification(t('enabled'), '\n'.join(names))
+            show_notification(t('enabled'), '\n'.join(display))
+            update_status(False)
+            _update_tray()
             return
-    show_notification(t('enabled'), '\n'.join(names))
+    show_notification(t('enabled'), '\n'.join(display))
+    update_status(False)
+    _update_tray()
 
 
 def toggle_internet() -> None:
@@ -184,8 +192,7 @@ def toggle_internet() -> None:
         if not internet_off:
             adapters = get_active_adapters()
             if not adapters:
-                show_notification(t('no_internet'),
-                                  t('no_adapters'))
+                show_notification(t('no_internet'), t('no_adapters'))
                 return
             names = [a['Name'] for a in adapters]
             errs = disable_adapters(names)
@@ -194,7 +201,10 @@ def toggle_internet() -> None:
                 return
             disabled_adapter_names = names
             internet_off = True
-            show_notification(t('disabled'), '\n'.join(names))
+            display = filter_display_names(names)
+            show_notification(t('disabled'), '\n'.join(display))
+            update_status(internet_off)
+            _update_tray()
         else:
             names = list(disabled_adapter_names)
             errs = enable_adapters(names)
@@ -203,11 +213,9 @@ def toggle_internet() -> None:
                 return
             internet_off = False
             disabled_adapter_names = []
-            show_notification(t('enabling'), '\n'.join(names))
+            display = filter_display_names(names)
+            show_notification(t('enabling'), '\n'.join(display))
             threading.Thread(target=_wait_internet, args=(names,), daemon=True).start()
-
-    update_status(internet_off)
-    _update_tray()
 
 
 # ─── Hotkey validation and registration ─────────────────────────
@@ -266,7 +274,7 @@ def _register_hotkey(hotkey: str) -> bool:
 
 
 _VK_MAP = {
-    'backspace': 0x08, 'tab': 0x09, 'enter': 0x0D, 'space': 0x20,
+    'backspace': 0x08, 'tab': 0x09, 'enter': 0x0D, 'pause': 0x13, 'space': 0x20,
     'caps lock': 0x14, 'escape': 0x1B, 'esc': 0x1B,
     'page up': 0x21, 'page down': 0x22, 'end': 0x23, 'home': 0x24,
     'left': 0x25, 'up': 0x26, 'right': 0x27, 'down': 0x28,
@@ -475,6 +483,19 @@ def _on_confirm():
     _confirm_event.set()
 
 
+def _set_mode(new_mode: str):
+    global _mode, internet_off
+    if _mode == new_mode:
+        return
+    if internet_off:
+        toggle_internet()
+    _mode = new_mode
+    config = load_config()
+    config['mode'] = _mode
+    save_config(config)
+    update_mode(_mode)
+
+
 # ─── Install / Self-update ──────────────────────────────────────
 
 INSTALL_DIR = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')),
@@ -632,13 +653,77 @@ IDC_EXIT = 1002
 _tray_hwnd = None
 _tray_nid = None
 _tray_hicon = None
+_tray_hicon_green = None
+_tray_hicon_red = None
+
+
+def _get_content_path(filename: str) -> str:
+    """Путь к файлу из папки content — работает и в exe и в dev."""
+    if getattr(sys, 'frozen', False):
+        base = sys._MEIPASS
+    else:
+        base = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'content')
+    return os.path.join(base, 'content', filename)
+
+
+def _make_tray_icon(filename: str) -> int:
+    """Создаёт HICON из jpg файла через PIL → убирает белый фон → .ico → LoadImage."""
+    try:
+        from PIL import Image
+        import tempfile
+        path = _get_content_path(filename)
+        img = Image.open(path).convert('RGBA')
+
+        # Убираем белый/светлый фон — делаем прозрачным
+        data = img.getdata()
+        new_data = []
+        for r, g, b, a in data:
+            # если пиксель почти белый — прозрачный
+            if r > 200 and g > 200 and b > 200:
+                new_data.append((r, g, b, 0))
+            else:
+                new_data.append((r, g, b, a))
+        img.putdata(new_data)
+
+        # Размер 64x64 для чёткости в трее
+        img = img.resize((64, 64), Image.LANCZOS)
+
+        tmp = tempfile.NamedTemporaryFile(suffix='.ico', delete=False)
+        tmp_path = tmp.name
+        tmp.close()
+        img.save(tmp_path, format='ICO', sizes=[(64, 64), (32, 32), (16, 16)])
+        hicon = ctypes.windll.user32.LoadImageW(
+            None, tmp_path, 1,   # IMAGE_ICON = 1
+            0, 0,
+            0x00000010 | 0x00000040 | 0x00008000  # LR_LOADFROMFILE | LR_DEFAULTSIZE | LR_SHARED
+        )
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+        if hicon:
+            return hicon
+    except Exception:
+        pass
+    return win32gui.LoadIcon(0, win32con.IDI_APPLICATION)
+
+
+def _get_tray_icon(is_off: bool) -> int:
+    global _tray_hicon_green, _tray_hicon_red
+    if is_off:
+        if _tray_hicon_red is None:
+            _tray_hicon_red = _make_tray_icon('red.jpg')
+        return _tray_hicon_red
+    else:
+        if _tray_hicon_green is None:
+            _tray_hicon_green = _make_tray_icon('green.jpg')
+        return _tray_hicon_green
 
 
 def _update_tray() -> None:
     global _tray_nid, _tray_hicon
     flags = win32gui.NIF_ICON | win32gui.NIF_MESSAGE | win32gui.NIF_TIP
-    if _tray_hicon is None:
-        _tray_hicon = win32gui.LoadIcon(0, win32con.IDI_APPLICATION)
+    _tray_hicon = _get_tray_icon(internet_off)
     tip = 'NetSwitch \u2014 ' + (t('off') if internet_off else t('on'))
 
     if _tray_nid is None:
@@ -794,6 +879,9 @@ def main() -> None:
     if not valid:
         _hotkey_str = 'end'
 
+    global _mode
+    _mode = config.get('mode', 'adapters')
+
     if not _start_hotkey_thread(_hotkey_str):
         _hotkey_str = 'end'
         if not _start_hotkey_thread('end'):
@@ -813,11 +901,13 @@ def main() -> None:
         on_exit=_exit_app,
         on_minimize=hide_window,
         on_lang=_toggle_lang,
+        on_mode=_set_mode,
     )
     show_window()
     update_hotkey(_hotkey_str)
     update_status(internet_off)
     update_version(VERSION)
+    update_mode(_mode)
 
     show_notification('NetSwitch', t('install_hint'))
 

@@ -1,5 +1,7 @@
 import socket
 import subprocess
+import urllib.request
+import urllib.error
 
 _si = subprocess.STARTUPINFO()
 _si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -37,6 +39,20 @@ def get_active_adapters() -> list[dict]:
     return adapters
 
 
+# Ключевые слова виртуальных адаптеров — только для фильтрации в уведомлениях
+_VIRTUAL_KEYWORDS = (
+    'tun', 'tap', 'vpn', 'virtual', 'loopback', 'pseudo', 'hamachi',
+    'vmware', 'vbox', 'hyper-v', 'docker', 'wsl', 'nordvpn', 'openvpn',
+    'wireguard', 'cisco', 'fortinet', 'npcap', 'miniport',
+)
+
+
+def filter_display_names(names: list[str]) -> list[str]:
+    """Возвращает только реальные адаптеры для показа в уведомлениях."""
+    filtered = [n for n in names if not any(kw in n.lower() for kw in _VIRTUAL_KEYWORDS)]
+    return filtered if filtered else names  # если всё отфильтровалось — показываем всё
+
+
 def disable_adapters(adapter_names: list[str]) -> list[str]:
     if not adapter_names:
         return []
@@ -72,22 +88,23 @@ def enable_adapters(adapter_names: list[str]) -> list[str]:
     return errors
 
 
-_PING_TARGETS = ['8.8.8.8', '1.1.1.1', '9.9.9.9']
-_DNS_HOSTS = ['google.com', 'cloudflare.com', 'ya.ru']
-
-
 def check_internet() -> bool:
-    for host in _DNS_HOSTS:
-        try:
-            socket.create_connection((host, 53), timeout=0.05)
-            return True
-        except (OSError, socket.timeout):
-            continue
-    for target in _PING_TARGETS:
-        try:
-            rc, _, _ = _run(['ping', '-n', '1', '-w', '100', target])
-            if rc == 0:
-                return True
-        except Exception:
-            continue
+    """Проверка через HTTP HEAD запрос к Cloudflare — самый надёжный способ."""
+    try:
+        req = urllib.request.Request('http://1.1.1.1', method='HEAD')
+        urllib.request.urlopen(req, timeout=0.5)
+        return True
+    except (urllib.error.URLError, urllib.error.HTTPError, OSError):
+        pass
+    
+    # Fallback — сырой TCP на порт 80
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.5)
+        result = sock.connect_ex(('1.1.1.1', 80))
+        sock.close()
+        return result == 0
+    except Exception:
+        pass
+    
     return False
