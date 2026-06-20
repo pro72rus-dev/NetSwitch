@@ -117,6 +117,7 @@ def _refresh_lang():
         _status_section_label.config(text=t('status'))
         _hotkey_section_label.config(text=t('hotkey_label'))
         _rebind_btn.config(text=t('change') if not _is_capturing else t('cancel'))
+        _confirm_btn.config(text=t('confirm'))
         _lang_btn.config(text=t('lang_btn'))
         if _internet_off:
             _status_label.config(text=t('disconnected'), fg=RED)

@@ -24,8 +24,6 @@ def _run_async(cmd: list[str]) -> subprocess.Popen:
 
 def get_active_adapters() -> list[dict]:
     global _cached_names
-    if _cached_names:
-        return [{'Name': n} for n in _cached_names]
     rc, out, _ = _run(['netsh', 'interface', 'show', 'interface'])
     if rc != 0 or not out:
         return []
@@ -72,13 +70,20 @@ def enable_adapters(adapter_names: list[str]) -> list[str]:
         proc.wait()
         if proc.returncode != 0:
             errors.append(f'{name} — enable failed')
-    _cached_names = []
+    if not errors:
+        _cached_names = []
     return errors
 
 
+_PING_TARGETS = ['8.8.8.8', '1.1.1.1', '114.114.114.114']
+
+
 def check_internet() -> bool:
-    try:
-        rc, _, _ = _run(['ping', '-n', '1', '-w', '200', '8.8.8.8'])
-        return rc == 0
-    except Exception:
-        return False
+    for target in _PING_TARGETS:
+        try:
+            rc, _, _ = _run(['ping', '-n', '1', '-w', '200', target])
+            if rc == 0:
+                return True
+        except Exception:
+            continue
+    return False

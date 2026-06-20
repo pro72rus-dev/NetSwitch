@@ -28,6 +28,8 @@ _strings = {
         'exit': 'Exit',
         'on': 'On',
         'off': 'Off',
+        'already_running': 'NetSwitch is already running',
+        'update_failed': 'Update failed',
     },
     'ru': {
         'status': 'СТАТУС',
@@ -56,6 +58,8 @@ _strings = {
         'exit': 'Выход',
         'on': 'Вкл',
         'off': 'Выкл',
+        'already_running': 'NetSwitch уже запущен',
+        'update_failed': 'Ошибка обновления',
     },
 }
 
