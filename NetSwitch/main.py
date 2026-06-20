@@ -162,15 +162,6 @@ def cleanup() -> None:
             internet_off = False
 
 
-def _wait_internet(names: list[str]) -> None:
-    for _ in range(200):
-        time.sleep(0.05)
-        if check_internet():
-            show_notification(t('enabled'), '\n'.join(names))
-            return
-    show_notification(t('enabled'), '\n'.join(names))
-
-
 def toggle_internet() -> None:
     global disabled_adapter_names, internet_off, _last_toggle
 
@@ -202,8 +193,7 @@ def toggle_internet() -> None:
                 return
             internet_off = False
             disabled_adapter_names = []
-            show_notification(t('enabling'), '\n'.join(names))
-            threading.Thread(target=_wait_internet, args=(names,), daemon=True).start()
+            show_notification(t('enabled'), '\n'.join(names))
 
     update_status(internet_off)
     _update_tray()
