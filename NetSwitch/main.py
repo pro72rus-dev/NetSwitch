@@ -163,6 +163,7 @@ def cleanup() -> None:
 
 
 def _wait_internet(names: list[str]) -> None:
+    time.sleep(1)
     for _ in range(300):
         time.sleep(0.01)
         if check_internet():
