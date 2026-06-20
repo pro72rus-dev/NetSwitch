@@ -412,12 +412,20 @@ def _do_install() -> None:
     try:
         shutil.copy2(src, tmp)
         if os.path.exists(dest):
-            os.remove(dest)
+            try:
+                os.remove(dest)
+            except PermissionError:
+                time.sleep(1)
+                os.remove(dest)
         os.rename(tmp, dest)
     except Exception:
         if os.path.exists(tmp):
             os.remove(tmp)
         shutil.copy2(src, dest)
+    for _ in range(10):
+        if os.path.exists(dest) and os.path.getsize(dest) > 0:
+            break
+        time.sleep(0.5)
     _register_uninstall()
     subprocess.Popen([dest], start_new_session=True)
     sys.exit(0)
@@ -613,8 +621,11 @@ def main() -> None:
             pass
         elif _is_installed():
             dest = os.path.join(INSTALL_DIR, 'NetSwitch.exe')
-            subprocess.Popen([dest] + sys.argv[1:], start_new_session=True)
-            sys.exit(0)
+            try:
+                subprocess.Popen([dest] + sys.argv[1:], start_new_session=True)
+                sys.exit(0)
+            except OSError:
+                _do_install()
         else:
             _do_install()
 
