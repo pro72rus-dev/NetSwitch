@@ -36,7 +36,6 @@
 | Скрыть в трей | Кнопка `─` в заголовке окна |
 | Сменить горячую клавишу | **Change** → нажать комбинацию → **Confirm** |
 | Сменить язык | Кнопка `EN` / `RU` в заголовке |
-| Полностью удалить | `NetSwitch.exe --uninstall` |
 
 ## 🔑Горячие клавиши
 
@@ -80,7 +79,7 @@
 
 1. Дважды кликните по иконке NetSwitch в трее — откроется окно
 2. Нажмите кнопку **Change**
-3. Нажмите нужную комбинацию клавиш (например `Ctrl+K`)
+3. Нажмите нужную комбинацию клавиш (например `Del`)
 4. Нажмите зелёную кнопку **Confirm** для подтверждения
 
 > [!CAUTION]
@@ -97,17 +96,6 @@
 - NetSwitch управляет сетевыми адаптерами через `netsh`, для этого нужны права администратора
 - При запуске Windows запросит повышение прав (UAC)
 - Это необходимо для отключения/включения адаптеров
-
-### Как полностью удалить NetSwitch?
-
-Запустите:
-```
-NetSwitch.exe --uninstall
-```
-Это удалит:
-- Файл `NetSwitch.exe` из `%LOCALAPPDATA%\NetSwitch`
-- Папку конфига `%APPDATA%\NetSwitch`
-- Записи из реестра Windows («Установка и удаление программ»)
 
 ### Интерфейс на английском, но я хочу русский
 
@@ -146,17 +134,6 @@ pip install pyinstaller
 > [!NOTE]
 > Собранный exe автоматически устанавливается при первом запуске. Отдельный установщик не требуется.
 
-## ⭐Поддержка проекта
-
-Вы можете поддержать проект, поставив :star: этому репозиторию (сверху справа этой страницы)
-
-<a href="https://star-history.com/#pro72rus-dev/NetSwitch&Date">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=pro72rus-dev/NetSwitch&type=Date&theme=dark" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=pro72rus-dev/NetSwitch&type=Date" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=pro72rus-dev/NetSwitch&type=Date" />
- </picture>
-</a>
 
 ## ⚖️Лицензирование
 
