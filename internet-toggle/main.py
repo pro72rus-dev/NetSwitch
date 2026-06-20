@@ -137,7 +137,7 @@ def cleanup() -> None:
 
 def _wait_internet(names: list[str]) -> None:
     for _ in range(30):
-        time.sleep(1)
+        time.sleep(0.3)
         if check_internet():
             show_notification(t('enabled'), '\n'.join(names))
             return

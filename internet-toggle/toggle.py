@@ -1,4 +1,5 @@
 import subprocess
+import threading
 
 _si = subprocess.STARTUPINFO()
 _si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -13,6 +14,12 @@ def _run(cmd: list[str]) -> tuple[int, str, str]:
     stdout = proc.stdout.decode('utf-8', errors='replace') if proc.stdout else ''
     stderr = proc.stderr.decode('utf-8', errors='replace') if proc.stderr else ''
     return proc.returncode, stdout.strip(), stderr.strip()
+
+
+def _run_async(cmd: list[str]) -> subprocess.Popen:
+    return subprocess.Popen(
+        cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, startupinfo=_si,
+    )
 
 
 def get_active_adapters() -> list[dict]:
@@ -39,11 +46,15 @@ def disable_adapters(adapter_names: list[str]) -> list[str]:
     if not _cached_names:
         _cached_names = list(adapter_names)
 
-    errors = []
+    procs = []
     for name in adapter_names:
-        rc, _, err = _run(['netsh', 'interface', 'set', 'interface', f'name={name}', 'admin=disable'])
-        if rc != 0:
-            errors.append(f'{name} — {err or "error"}')
+        procs.append((name, _run_async(['netsh', 'interface', 'set', 'interface', f'name={name}', 'admin=disable'])))
+
+    errors = []
+    for name, proc in procs:
+        proc.wait()
+        if proc.returncode != 0:
+            errors.append(f'{name} — disable failed')
     return errors
 
 
@@ -52,18 +63,22 @@ def enable_adapters(adapter_names: list[str]) -> list[str]:
         return []
     global _cached_names
 
-    errors = []
+    procs = []
     for name in adapter_names:
-        rc, _, err = _run(['netsh', 'interface', 'set', 'interface', f'name={name}', 'admin=enable'])
-        if rc != 0:
-            errors.append(f'{name} — {err or "error"}')
+        procs.append((name, _run_async(['netsh', 'interface', 'set', 'interface', f'name={name}', 'admin=enable'])))
+
+    errors = []
+    for name, proc in procs:
+        proc.wait()
+        if proc.returncode != 0:
+            errors.append(f'{name} — enable failed')
     _cached_names = []
     return errors
 
 
 def check_internet() -> bool:
     try:
-        rc, _, _ = _run(['ping', '-n', '1', '-w', '1000', '8.8.8.8'])
+        rc, _, _ = _run(['ping', '-n', '1', '-w', '200', '8.8.8.8'])
         return rc == 0
     except Exception:
         return False
