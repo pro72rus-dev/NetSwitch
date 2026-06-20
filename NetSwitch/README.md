@@ -131,17 +131,14 @@ python main.py
 
 ```
 NetSwitch/
-├── internet-toggle/
-│   ├── main.py          # Точка входа, горячие клавиши, трей, автоустановка
-│   ├── gui.py           # Тёмный GUI (tkinter), привязка клавиш
-│   ├── toggle.py        # Управление адаптерами (netsh), параллельный toggle
-│   ├── notifier.py      # Оверлей-уведомления поверх игр (topmost)
-│   ├── strings.py       # Локализация EN/RU
-│   ├── build.ps1        # Скрипт сборки exe
-│   ├── requirements.txt # Зависимости
-│   └── start.bat        # Запуск из исходников
-├── LICENSE
-└── README.md
+├── main.py          # Точка входа, горячие клавиши, трей, автоустановка
+├── gui.py           # Тёмный GUI (tkinter), привязка клавиш
+├── toggle.py        # Управление адаптерами (netsh), параллельный toggle
+├── notifier.py      # Оверлей-уведомления поверх игр (topmost)
+├── strings.py       # Локализация EN/RU
+├── build.ps1        # Скрипт сборки exe
+├── requirements.txt # Зависимости
+└── start.bat        # Запуск из исходников
 ```
 
 ---
